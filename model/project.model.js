@@ -16,7 +16,7 @@ const qaqcSchema = mongoose.Schema({
 
 // Define the Material schema
 const materialSchema = new mongoose.Schema({
-  sno: { type: Number, required: true },
+  serialNumber: { type: Number, required: true },
   element: { type: String, required: true },
   document: { type: String, required: true },
   docType: { type: String, enum: documentTypeEnum, required: true },
