@@ -14,7 +14,7 @@ app.get('/',(req,res)=>{
     )
 })
 //Making a get call from the Projet -> Nested Get
-app.get('/api/projects/:id', async (req, res) => {
+app.get('/api/projects', async (req, res) => {
     try {
       const project = await Project.findById(req.params.id);
       if (!project) return res.status(404).json({ message: 'Project not found' });
@@ -30,6 +30,7 @@ app.get('/api/projects/:id', async (req, res) => {
       const updatedProject = await Project.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
       if (!updatedProject) return res.status(404).json({ message: 'Project not found' });
       res.status(200).json(updatedProject);
+      
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
@@ -79,18 +80,23 @@ app.get('/api/projects/:id', async (req, res) => {
   });
 
   //delete api for nested qaqc. 
-  app.delete('/api/projects/:id/qaqc/:qaqcId', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.id);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      project.qaqcEntries.id(req.params.qaqcId).remove();
-      await project.save();
-      res.status(200).json(project);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+app.delete('/api/projects/:id/qaqc/:qaqcId', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const qaqcId = mongoose.Types.ObjectId(req.params.qaqcId);
+    const qaqcEntry = project.qaqcEntries.id(qaqcId);
+
+    if (!qaqcEntry) return res.status(404).json({ message: 'QAQC entry not found' });
+
+    qaqcEntry.remove();
+    await project.save();
+    res.status(200).json(project);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
 
 
   
