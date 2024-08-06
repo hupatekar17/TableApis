@@ -1,20 +1,17 @@
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 
+// const drawingSchema = new mongoose.Schema({
+//   location: { type: String, required: true },
+//   doc: { type: , required: true },
+//   stage: { type: Date, required:true },
+//   revision: { type: String },
+//   status: { type: String, default: 'Pending' },
+//   remarks: { type: String },
 
-const statusEnum = ['Pending', 'Approved', 'Rejected'];
+// },
+// {timestamps:true}
+// );
 
-const drawingSchema = new mongoose.Schema({
-  serialNumber: { type: Number, required: true },
-  facadeReference: { type: String, required: true },
-  submissionDate: { type: Date, required: true },
-  approvalDate: { type: Date, required:true },
-  link: { type: String },
-  pendingIssue: { type: String },
-  status: { type: String, enum: statusEnum, default: 'Pending' }
-},
-{timestamps:true}
-);
+// const Drawing = mongoose.model('Drawing', drawingSchema);
 
-const Drawing = mongoose.model('Drawing', drawingSchema);
-
-module.exports = Drawing;
+// module.exports = Drawing;
