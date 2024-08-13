@@ -10,28 +10,27 @@ const qaqcSchema = mongoose.Schema({
   status: { type: String},
   remarks: { type: String },
 
-},{timestamps:true}
+}
 );
 
 // Define the Material schema
 const materialSchema = new mongoose.Schema({
-  element:{type:String, required:true},
-  document: { type: String, required: true },
-  docType: { type: String, required: true },
-  status: { type: String, required: true },  
-  remarks:{type:String, required:true}
+  element:{type:String},
+  document: { type: String},
+  docType: { type: String },
+  status: { type: String },  
+  remarks:{type:String}
 
-},
-{timestamps:true});
+});
 
 
 // Define the Drawing schema
 const drawingSchema = new mongoose.Schema({
-  location: { type: String, required: true },
-  doc: { type: String, required: true },
-  stage: { type: String, required:true },
+  location: { type: String},
+  doc: { type: String },
+  stage: { type: String},
   revision: { type: String },
-  status: { type: String, default: 'Pending' },
+  status: { type: String },
   remarks: { type: String },
 
 },
@@ -41,7 +40,7 @@ const drawingSchema = new mongoose.Schema({
 
 // Define the Project schema
 const projectSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  name: { type: String},
   qaqcEntries: [qaqcSchema],       // Array of Qaqc entries
   materialEntries: [materialSchema],  // Array of Material entries
   drawingEntries: [drawingSchema]   // Array of Drawing entries

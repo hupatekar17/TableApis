@@ -4,7 +4,7 @@
 
 const express = require('express')
 const mongoose = require('mongoose')
-const cors = require("cors")
+const cors = require("cors")                    
 // const Qaqc = require('./model/qaqc.model.js')
 // const Material= require('./model/material.model.js')
 // const Drawing = require('./model/drawing.model.js')
@@ -17,7 +17,7 @@ app.use(express.json());
 
 app.get('/',(req,res)=>{
     res.send(
-        "API IS WORKING "
+        "API IS not "
     )
 })
 
@@ -64,17 +64,58 @@ const defaultQaqcvalues =
 
 //Fetching qaqc entries
 //changes made on 29th july
+const QaQcEntry = require('./model/project.model.js'); // Adjust path as needed
+
 app.get('/api/projects/:id/qaqc', async (req, res) => {
   try {
     const { id } = req.params;
-    const qaqcEntries = await QaQcEntry.find({ id });
-    res.json(qaqcEntries);
-} catch (error) {
-    console.error(error);
-    res.status(500).send('Server Error');
-}
-});
 
+    // Find documents by ObjectId, assuming 'id' is an ObjectId
+    const qaqcEntries = await QaQcEntry.find({ projectId: id });
+
+    // Check if qaqcEntries is an array and not empty
+    if (Array.isArray(qaqcEntries) && qaqcEntries.length > 0) {
+      res.json({ qaqcEntries }); // Ensure this matches the frontend expectations
+    } else {
+      res.json({ qaqcEntries: [] }); // Return an empty array if no entries are found
+    }
+  } catch (error) {
+    console.error('Error fetching QAQC data:', error.message);
+    res.status(500).send('Server Error');
+  }
+});
+app.post('/api/projects/:id/qaqc', async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const newQaqcEntry = req.body;
+
+    // Validate the QAQC entry
+    if (!newQaqcEntry.element || !newQaqcEntry.tests || !newQaqcEntry.standards || !newQaqcEntry.frequency || !newQaqcEntry.status) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Find the project by ID
+    const project = await Project.findById(projectId);
+
+    // If project is not found, return a 404 error
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Add the new QAQC entry to the project
+    project.qaqcEntries.push(newQaqcEntry);
+
+    // Save the updated project
+    await project.save();
+
+    // Return the updated QAQC entries
+    res.status(201).json(project.qaqcEntries);
+  } catch (error) {
+    // Log any errors
+    console.error('Error adding QAQC entry:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 
 //Making a get call from the Projet -> Nested Get
@@ -168,63 +209,7 @@ app.get('/api/projects/:id', async (req, res) => {
     }
   });
   
-   //Post Post call for nested qaqc
-   app.post('/api/projects/:id/material', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.id);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-      const materialArr=req.body;
-      const updateArr=materialArr.filter(a=>!!a._id);
-      const insertArr=materialArr.filter(a=>!a._id);
-     // console.log(`updateArr::${JSON.stringify(updateArr)}`);
-      //console.log(`insertArr::${JSON.stringify(insertArr)}`);
-      if(updateArr){
-        for (const material of updateArr) {
-         const updateObj= project.materialEntries.id(material._id);
-         updateObj.$set(material);
-        }
-      }
-
-      if(insertArr){
-        for (const material of insertArr) {
-          project.materialEntries.push(qaqc);
-         }
-      }
-      await project.save();
-      res.status(201).json(project);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-
-  //post call for drawing
-  app.post('/api/projects/:id/drawing', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.id);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-      const drawingArr=req.body;
-      const updateArr=drawingArr.filter(a=>!!a._id);
-      const insertArr=drawingArr.filter(a=>!a._id);
-     // console.log(`updateArr::${JSON.stringify(updateArr)}`);
-      //console.log(`insertArr::${JSON.stringify(insertArr)}`);
-      if(updateArr){
-        for (const drawing of updateArr) {
-         const updateObj= project.drawingEntries.id(drawing._id);
-         updateObj.$set(drawing);
-        }
-      }
-
-      if(insertArr){
-        for (const drawing of insertArr) {
-          project.drawingEntries.push(qaqc);
-         }
-      }
-      await project.save();
-      res.status(201).json(project);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+ 
 
   //patch update call for nested qaqc.
   app.patch('/api/projects/:id/qaqc/:qaqcId', async (req, res) => {
@@ -243,176 +228,9 @@ app.get('/api/projects/:id', async (req, res) => {
     }
   });
 
-  //delete api for nested qaqc. 
-app.delete('/api/projects/:id/qaqc/:qaqcId', async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id);
-    if (!project) return res.status(404).json({ message: 'Project not found' });
-
-    const qaqcId = mongoose.Types.ObjectId(req.params.qaqcId);
-    const qaqcEntry = project.qaqcEntries.id(qaqcId);
-
-    if (!qaqcEntry) return res.status(404).json({ message: 'QAQC entry not found' });
-
-    qaqcEntry.remove();
-    await project.save();
-    res.status(200).json(project);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
+  
 
 
-  
-  //Matrial Endpoints
-
-  //Materail Post
-  app.post('/api/projects/:projectId/material', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.projectId);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      project.materialEntries.push(req.body);
-      await project.save();
-      res.status(201).json(project);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-
-  //Matrial Get 
-  app.get('/api/projects/:projectId/material', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.projectId);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      res.status(200).json(project.materialEntries);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-  //Material Get specific Entry 
-  app.get('/api/projects/:projectId/material/:materialId', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.projectId);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      const materialEntry = project.materialEntries.id(req.params.materialId);
-      if (!materialEntry) return res.status(404).json({ message: 'Material entry not found' });
-  
-      res.status(200).json(materialEntry);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-  
-  //Materail Update
-  app.patch('/api/projects/:projectId/material/:materialId', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.projectId);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      const materialEntry = project.materialEntries.id(req.params.materialId);
-      if (!materialEntry) return res.status(404).json({ message: 'Material entry not found' });
-  
-      materialEntry.set(req.body);
-      await project.save();
-      res.status(200).json(materialEntry);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-  
-  //Material Delete
-  app.delete('/api/projects/:projectId/material/:materialId', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.projectId);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      project.materialEntries.id(req.params.materialId).remove();
-      await project.save();
-      res.status(200).json({ message: 'Material entry deleted successfully' });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-
-  
-  //Drawing Endpoints.
-
-  //Drawing Post
-  app.post('/api/projects/:_id/drawing', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params._id);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      project.drawingEntries.push(req.body);
-      await project.save();
-      res.status(201).json(project);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-  
-  //Drawing get all
-  app.get('/api/projects/:projectId/drawing', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.projectId);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      res.status(200).json(project.drawingEntries);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-  
-  //Drawing Get specific
-  app.get('/api/projects/:projectId/drawing/:drawingId', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.projectId);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      const drawingEntry = project.drawingEntries.id(req.params.drawingId);
-      if (!drawingEntry) return res.status(404).json({ message: 'Drawing entry not found' });
-  
-      res.status(200).json(drawingEntry);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-  
-  //Drawing Update
-  app.patch('/api/projects/:projectId/drawing/:drawingId', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.projectId);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      const drawingEntry = project.drawingEntries.id(req.params.drawingId);
-      if (!drawingEntry) return res.status(404).json({ message: 'Drawing entry not found' });
-  
-      drawingEntry.set(req.body);
-      await project.save();
-      res.status(200).json(drawingEntry);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-  
-  //Drawing Delete
-  app.delete('/api/projects/:projectId/drawing/:drawingId', async (req, res) => {
-    try {
-      const project = await Project.findById(req.params.projectId);
-      if (!project) return res.status(404).json({ message: 'Project not found' });
-  
-      project.drawingEntries.id(req.params.drawingId).remove();
-      await project.save();
-      res.status(200).json({ message: 'Drawing entry deleted successfully' });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-  
-  
   
   
 
@@ -430,86 +248,126 @@ app.post('/api/projects', async (req,res) =>{
     }
 });
 
-// //Posting Qaqc table.
-//   app.post('/api/qaqc', async (req,res) =>{
-//         try{
-//            const qaqc =  await Qaqc.create(req.body);
-//            res.status(200).json(qaqc)
-//         }
-//         catch(error){
-//             res.status(500).json({message:error.message})
-//         }
-// });
 
-// //For posting data on material
-// app.post('/api/material', async (req,res) =>{
-//     try{
-//        const material =  await Material.create(req.body);
-//        res.status(200).json(material)
-//     }
-//     catch(error){
-//         res.status(500).json({message:error.message})
-//     }
-// });
+//Changes as of 13 aug
 
-//latest update for drawing approval:
+app.get('/api/projects/:id/qaqc', async (req, res) => {
+  try {
+    const projectId = req.params.id;
 
-let drawingApprovals = {};
+    // Find the project by ID
+    const project = await Project.findById(projectId).select('qaqcEntries');
 
-// POST endpoint to save drawing approvals
-app.post('/api/projects/:id/drawing', (req, res) => {
-  const projectId = req.params.id;
-  const data = req.body;
+    // If project is not found, return a 404 error
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
 
-  // Validate data (you might want to add more robust validation)
-  if (!Array.isArray(data)) {
-    return res.status(400).json({ message: 'Invalid data format' });
+    // Send the QAQC entries as the response
+    res.json(project.qaqcEntries);
+  } catch (error) {
+    // Handle any errors that occur
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
   }
-
-  // Save the data (in this example, we use an in-memory object)
-  drawingApprovals[projectId] = data;
-
-  res.status(200).json({ message: 'Data saved successfully', data });
 });
 
-// GET endpoint to retrieve drawing approvals (for testing purposes)
-app.get('/api/projects/:id/drawing', (req, res) => {
-  const projectId = req.params.id;
-  const data = drawingApprovals[projectId] || [];
 
-  res.status(200).json(data);
-});
+//Working 
+// Route to add a drawing to a project
+app.post('/api/projects/:id/drawing', async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const drawingData = req.body;
 
-//For posting data on material
-app.post('/api/drawing', async (req,res) =>{
-    try{
-       const drawing =  await Drawing.create(req.body);
-       res.status(200).json(drawing)
+    // Validate drawingData if needed
+    if (!drawingData.location || !drawingData.doc || !drawingData.stage) {
+      return res.status(400).json({ error: 'Required fields are missing' });
     }
-    catch(error){
-        res.status(500).json({message:error.message})
+
+    // Find the project by ID and add the drawing
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
     }
-}); 
 
-//API For pdf generator
-app.post('/create-pdf', (req, res) => {
-  pdf.create(pdfTemplate(req.body), {}).toFile('result.pdf', (err) => {
-      if(err) {
-          res.send(Promise.reject());
-      }
+    // Add the drawing to the project's drawingEntries array
+    project.drawingEntries.push(drawingData);
 
-      res.send(Promise.resolve());
-  });
+    // Save the updated project
+    await project.save();
+
+    res.status(201).json({ message: 'Drawing added successfully', drawing: drawingData });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred while adding the drawing' });
+  }
 });
 
-app.get('/fetch-pdf', (req, res) => {
-  res.sendFile(`${__dirname}/result.pdf`)
-})
+//qaqc// Route to add a QAQC entry to a project
+app.post('/api/projects/:id/qaqc', async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const qaqcData = req.body;
+
+    // Validate qaqcData if needed
+    if (!qaqcData.element || !qaqcData.tests || !qaqcData.standards) {
+      return res.status(400).json({ error: 'Required fields are missing' });
+    }
+
+    // Find the project by ID and add the QAQC entry
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Add the QAQC entry to the project's qaqcEntries array
+    project.qaqcEntries.push(qaqcData);
+
+    // Save the updated project
+    await project.save();
+
+    res.status(201).json({ message: 'QAQC entry added successfully', qaqc: qaqcData });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred while adding the QAQC entry' });
+  }
+});
+
+// Route to add a Material entry to a project
+app.post('/api/projects/:id/material', async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const materialData = req.body;
+
+    // Validate materialData if needed
+    if (!materialData.element || !materialData.document || !materialData.docType) {
+      return res.status(400).json({ error: 'Required fields are missing' });
+    }
+
+    // Find the project by ID and add the Material entry
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Add the Material entry to the project's materialEntries array
+    project.materialEntries.push(materialData);
+
+    // Save the updated project
+    await project.save();
+
+    res.status(201).json({ message: 'Material entry added successfully', material: materialData });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred while adding the Material entry' });
+  }
+});
 
 
 
 mongoose.connect(
-    "mongodb+srv://harsh:1234@backend.vqywshf.mongodb.net/?retryWrites=true&w=majority&appName=Backend")
+    "mongodb://localhost:27017/")
     .then(() => {
         console.log("Connected to the database");
     })
@@ -521,5 +379,5 @@ mongoose.connect(
 app.listen(4000,()=>{
     console.log('Server running on 4000');
 })
-//Project 1-> table 12
+
 
